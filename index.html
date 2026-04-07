@@ -48,16 +48,18 @@
         /* Main Scrubber Area */
         .scrub-card {
             background: var(--input-bg);
-            border: 1px solid var(--border);
+            border: 2px solid var(--border);
             border-radius: var(--radius);
             padding: 15px;
             margin-bottom: 20px;
             position: relative;
+            transition: border-color 0.3s;
         }
+        .scrub-card.clean { border-color: var(--success); }
 
         textarea {
             width: 100%;
-            height: 250px;
+            height: 280px;
             padding: 10px;
             padding-right: 35px;
             border: none;
@@ -76,48 +78,39 @@
         textarea::placeholder { color: var(--placeholder); -webkit-text-fill-color: var(--placeholder); }
 
         .clr-btn {
-            position: absolute;
-            right: 15px;
-            top: 15px;
-            background: #ddd;
-            color: #fff;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: none;
-            font-size: 12px;
-            font-weight: 800;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
+            position: absolute; right: 15px; top: 15px;
+            background: #ddd; color: #fff; width: 24px; height: 24px;
+            border-radius: 50%; border: none; font-size: 12px; font-weight: 800;
+            cursor: pointer; display: none; align-items: center; justify-content: center;
             z-index: 5;
         }
         .clr-btn.active { display: flex; }
 
-        /* Result Area */
-        .result-box {
+        /* Powerful Scrub Button */
+        .action-btn {
             background: var(--main);
             color: #fff;
-            padding: 25px 15px;
+            padding: 22px;
             border-radius: var(--radius);
+            border: none;
+            font-size: 1.4rem;
+            font-weight: 800;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
             margin-top: auto;
+            width: 100%;
         }
-        .result-box.copied { background: var(--success); }
-        .result-box:active { transform: scale(0.98); }
-        
-        .res-label { font-size: 0.8rem; font-weight: 700; opacity: 0.6; margin-bottom: 8px; display: block; }
-        .res-val { font-size: 1.4rem; font-weight: 800; }
+        .action-btn:active { transform: scale(0.96); opacity: 0.9; }
+        .action-btn.success { background: var(--success); }
+        .action-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+        .btn-label { letter-spacing: 1px; }
 
         /* Footer & Modal */
-        #toast {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--main); color: #fff; padding: 12px 24px; border-radius: 20px;
-            font-size: 0.9rem; font-weight: 700; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000;
-        }
-
         footer { margin-top: 60px; font-size: 12px; color: #777; line-height: 1.8; font-weight: 500; }
         footer a { color: inherit; text-decoration: underline; }
         .footer-btns { margin-top: 30px; }
@@ -145,21 +138,18 @@
 </head>
 <body>
 
-<div id="toast">Copied!</div>
-
 <div class="container">
     <h1>Markdown Scrub</h1>
-    <p class="subtitle">Purify AI text. Remove all symbols.</p>
+    <p class="subtitle">Purify AI text. Tap to wash away symbols.</p>
 
-    <div class="scrub-card">
-        <textarea id="input" placeholder="Paste Markdown text here..." oninput="scrub()"></textarea>
+    <div class="scrub-card" id="card">
+        <textarea id="input" placeholder="Paste Markdown text here..." oninput="checkInput()"></textarea>
         <button class="clr-btn" id="clr" onclick="cls()">×</button>
     </div>
 
-    <div class="result-box" id="copyBtn" onclick="cp()">
-        <span class="res-label" id="resLabel">Tap to copy clean text</span>
-        <div class="res-val" id="statusText">Ready to Scrub</div>
-    </div>
+    <button id="actionBtn" class="action-btn" onclick="handleAction()" disabled>
+        <span class="btn-label" id="btnLabel">SCRUB</span>
+    </button>
 
     <div class="footer-btns">
         <a href="https://ko-fi.com/afrorakda" target="_blank" class="kofi-btn">☕️buy me a coffee</a>
@@ -185,69 +175,65 @@
 <script>
     const input = document.getElementById('input');
     const clr = document.getElementById('clr');
-    const copyBtn = document.getElementById('copyBtn');
-    const statusText = document.getElementById('statusText');
-    const resLabel = document.getElementById('resLabel');
-    let scrubbedText = "";
+    const card = document.getElementById('card');
+    const actionBtn = document.getElementById('actionBtn');
+    const btnLabel = document.getElementById('btnLabel');
+    
+    let isCleaned = false;
+
+    function checkInput() {
+        const val = input.value.trim();
+        clr.classList.toggle('active', val.length > 0);
+        
+        if (val.length > 0) {
+            if (!isCleaned) {
+                actionBtn.disabled = false;
+                btnLabel.innerText = "SCRUB";
+                actionBtn.classList.remove('success');
+                card.classList.remove('clean');
+            }
+        } else {
+            resetUI();
+        }
+    }
 
     function cls() {
         input.value = '';
-        scrub();
+        resetUI();
         input.focus();
     }
 
-    function scrub() {
-        const raw = input.value;
-        clr.classList.toggle('active', raw.length > 0);
+    function resetUI() {
+        isCleaned = false;
+        actionBtn.disabled = true;
+        btnLabel.innerText = "SCRUB";
+        actionBtn.classList.remove('success');
+        card.classList.remove('clean');
+        clr.classList.remove('active');
+    }
 
-        if (!raw.trim()) {
-            scrubbedText = "";
-            statusText.innerText = "Ready to Scrub";
-            return;
+    function handleAction() {
+        if (!isCleaned) {
+            scrubText();
+        } else {
+            copyText();
         }
+    }
 
-        // Logic: Scrubbing Markdown
+    function scrubText() {
+        const raw = input.value;
+        if (!raw.trim()) return;
+
+        // Scrubber Engine
         let clean = raw
             .replace(/^#+\s+/gm, '') // Headers
             .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
             .replace(/(\*|_)(.*?)\1/g, '$2') // Italic
             .replace(/~~(.*?)~~/g, '$1') // Strikethrough
-            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Links [text](url) -> text
-            .replace(/`{3,}[\s\S]*?`{3,}/g, (match) => { // Code blocks
-                return match.replace(/`{3,}/g, '').trim();
-            })
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Links
+            .replace(/`{3,}[\s\S]*?`{3,}/g, (match) => match.replace(/`{3,}/g, '').trim()) // Blocks
             .replace(/`(.+?)`/g, '$1') // Inline code
-            .replace(/^\s*[\*\-\+]\s+/gm, '') // Unordered lists
-            .replace(/^\s*\d+\.\s+/gm, '') // Ordered lists
+            .replace(/^\s*[\*\-\+]\s+/gm, '') // Unordered
+            .replace(/^\s*\d+\.\s+/gm, '') // Ordered
             .replace(/^\s*>\s+/gm, '') // Blockquotes
-            .replace(/!\[(.*?)\]\(.*?\)/g, '$1'); // Images
-
-        scrubbedText = clean.trim();
-        statusText.innerText = "Text Purified";
-    }
-
-    async function cp() {
-        if (!scrubbedText) return;
-        try {
-            await navigator.clipboard.writeText(scrubbedText);
-            const originalLabel = resLabel.innerText;
-            const originalStatus = statusText.innerText;
-
-            copyBtn.classList.add('copied');
-            resLabel.innerText = "Clean Text Copied!";
-            statusText.innerText = "Success";
-
-            setTimeout(() => {
-                copyBtn.classList.remove('copied');
-                resLabel.innerText = originalLabel;
-                statusText.innerText = originalStatus;
-            }, 1500);
-        } catch (e) {}
-    }
-
-    function showM() { document.getElementById('modal').style.display = 'flex'; }
-    function hideM() { document.getElementById('modal').style.display = 'none'; }
-</script>
-
-</body>
-</html>
+            .replace(/!\[(.*?)\]\(.*?\)/g, '$1');
