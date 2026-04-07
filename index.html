@@ -45,7 +45,6 @@
         h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
         .subtitle { font-size: 1rem; color: var(--text-gray); font-weight: 600; margin-bottom: 30px; }
 
-        /* Main Scrubber Area */
         .scrub-card {
             background: var(--input-bg);
             border: 2px solid var(--border);
@@ -86,7 +85,6 @@
         }
         .clr-btn.active { display: flex; }
 
-        /* Powerful Scrub Button */
         .action-btn {
             background: var(--main);
             color: #fff;
@@ -97,20 +95,14 @@
             font-weight: 800;
             cursor: pointer;
             transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: auto;
             width: 100%;
+            margin-top: auto;
+            touch-action: manipulation;
         }
         .action-btn:active { transform: scale(0.96); opacity: 0.9; }
         .action-btn.success { background: var(--success); }
-        .action-btn:disabled { background: var(--border); cursor: not-allowed; }
+        .action-btn:disabled { background: var(--border); cursor: not-allowed; opacity: 0.5; }
 
-        .btn-label { letter-spacing: 1px; }
-
-        /* Footer & Modal */
         footer { margin-top: 60px; font-size: 12px; color: #777; line-height: 1.8; font-weight: 500; }
         footer a { color: inherit; text-decoration: underline; }
         .footer-btns { margin-top: 30px; }
@@ -147,9 +139,7 @@
         <button class="clr-btn" id="clr" onclick="cls()">×</button>
     </div>
 
-    <button id="actionBtn" class="action-btn" onclick="handleAction()" disabled>
-        <span class="btn-label" id="btnLabel">SCRUB</span>
-    </button>
+    <button id="actionBtn" class="action-btn" onclick="handleAction()" disabled>SCRUB</button>
 
     <div class="footer-btns">
         <a href="https://ko-fi.com/afrorakda" target="_blank" class="kofi-btn">☕️buy me a coffee</a>
@@ -177,7 +167,6 @@
     const clr = document.getElementById('clr');
     const card = document.getElementById('card');
     const actionBtn = document.getElementById('actionBtn');
-    const btnLabel = document.getElementById('btnLabel');
     
     let isCleaned = false;
 
@@ -185,31 +174,18 @@
         const val = input.value.trim();
         clr.classList.toggle('active', val.length > 0);
         
-        if (val.length > 0) {
-            if (!isCleaned) {
-                actionBtn.disabled = false;
-                btnLabel.innerText = "SCRUB";
-                actionBtn.classList.remove('success');
-                card.classList.remove('clean');
-            }
-        } else {
-            resetUI();
-        }
+        // 貼り付け直後や再入力時はSCRUBモードにリセット
+        isCleaned = false;
+        actionBtn.disabled = val.length === 0;
+        actionBtn.innerText = "SCRUB";
+        actionBtn.classList.remove('success');
+        card.classList.remove('clean');
     }
 
     function cls() {
         input.value = '';
-        resetUI();
+        checkInput();
         input.focus();
-    }
-
-    function resetUI() {
-        isCleaned = false;
-        actionBtn.disabled = true;
-        btnLabel.innerText = "SCRUB";
-        actionBtn.classList.remove('success');
-        card.classList.remove('clean');
-        clr.classList.remove('active');
     }
 
     function handleAction() {
@@ -224,16 +200,43 @@
         const raw = input.value;
         if (!raw.trim()) return;
 
-        // Scrubber Engine
         let clean = raw
-            .replace(/^#+\s+/gm, '') // Headers
-            .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
-            .replace(/(\*|_)(.*?)\1/g, '$2') // Italic
-            .replace(/~~(.*?)~~/g, '$1') // Strikethrough
-            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Links
-            .replace(/`{3,}[\s\S]*?`{3,}/g, (match) => match.replace(/`{3,}/g, '').trim()) // Blocks
-            .replace(/`(.+?)`/g, '$1') // Inline code
-            .replace(/^\s*[\*\-\+]\s+/gm, '') // Unordered
-            .replace(/^\s*\d+\.\s+/gm, '') // Ordered
-            .replace(/^\s*>\s+/gm, '') // Blockquotes
-            .replace(/!\[(.*?)\]\(.*?\)/g, '$1');
+            .replace(/^#+\s+/gm, '') 
+            .replace(/(\*\*|__)(.*?)\1/g, '$2') 
+            .replace(/(\*|_)(.*?)\1/g, '$2') 
+            .replace(/~~(.*?)~~/g, '$1') 
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') 
+            .replace(/`{3,}[\s\S]*?`{3,}/g, (match) => match.replace(/`{3,}/g, '').trim()) 
+            .replace(/`(.+?)`/g, '$1') 
+            .replace(/^\s*[\*\-\+]\s+/gm, '') 
+            .replace(/^\s*\d+\.\s+/gm, '') 
+            .replace(/^\s*>\s+/gm, '') 
+            .replace(/!\[(.*?)\]\(.*?\)/g, '$1'); 
+
+        input.value = clean.trim();
+        
+        isCleaned = true;
+        actionBtn.innerText = "COPY CLEAN TEXT";
+        actionBtn.classList.add('success');
+        card.classList.add('clean');
+    }
+
+    async function copyText() {
+        try {
+            await navigator.clipboard.writeText(input.value);
+            const originalLabel = actionBtn.innerText;
+            actionBtn.innerText = "COPIED!";
+            setTimeout(() => {
+                actionBtn.innerText = originalLabel;
+            }, 1500);
+        } catch (e) {
+            alert("Copy failed. Please select and copy manually.");
+        }
+    }
+
+    function showM() { document.getElementById('modal').style.display = 'flex'; }
+    function hideM() { document.getElementById('modal').style.display = 'none'; }
+</script>
+
+</body>
+</html>
