@@ -52,20 +52,20 @@
             padding: 15px;
             margin-bottom: 20px;
             position: relative;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
         }
-        .scrub-card.clean { border-color: var(--success); }
+        .scrub-card.clean { border-color: var(--success); background: #fff; box-shadow: 0 10px 20px rgba(46, 204, 113, 0.05); }
 
         textarea {
             width: 100%;
-            height: 280px;
+            height: 300px;
             padding: 10px;
             padding-right: 35px;
             border: none;
             background: transparent;
             font-size: 1.1rem;
             font-weight: 600;
-            line-height: 1.5;
+            line-height: 1.6;
             color: var(--main) !important;
             box-sizing: border-box;
             outline: none;
@@ -94,14 +94,15 @@
             font-size: 1.4rem;
             font-weight: 800;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
             margin-top: auto;
             touch-action: manipulation;
+            letter-spacing: 1px;
         }
         .action-btn:active { transform: scale(0.96); opacity: 0.9; }
         .action-btn.success { background: var(--success); }
-        .action-btn:disabled { background: var(--border); cursor: not-allowed; opacity: 0.5; }
+        .action-btn:disabled { background: var(--border); cursor: not-allowed; opacity: 0.3; }
 
         footer { margin-top: 60px; font-size: 12px; color: #777; line-height: 1.8; font-weight: 500; }
         footer a { color: inherit; text-decoration: underline; }
@@ -174,7 +175,7 @@
         const val = input.value.trim();
         clr.classList.toggle('active', val.length > 0);
         
-        // 貼り付け直後や再入力時はSCRUBモードにリセット
+        // Reset state on new input
         isCleaned = false;
         actionBtn.disabled = val.length === 0;
         actionBtn.innerText = "SCRUB";
@@ -200,21 +201,26 @@
         const raw = input.value;
         if (!raw.trim()) return;
 
+        // Visual Magic: Close keyboard to show the result
+        input.blur();
+
         let clean = raw
-            .replace(/^#+\s+/gm, '') 
-            .replace(/(\*\*|__)(.*?)\1/g, '$2') 
-            .replace(/(\*|_)(.*?)\1/g, '$2') 
-            .replace(/~~(.*?)~~/g, '$1') 
-            .replace(/\[(.*?)\]\(.*?\)/g, '$1') 
-            .replace(/`{3,}[\s\S]*?`{3,}/g, (match) => match.replace(/`{3,}/g, '').trim()) 
-            .replace(/`(.+?)`/g, '$1') 
-            .replace(/^\s*[\*\-\+]\s+/gm, '') 
-            .replace(/^\s*\d+\.\s+/gm, '') 
-            .replace(/^\s*>\s+/gm, '') 
-            .replace(/!\[(.*?)\]\(.*?\)/g, '$1'); 
+            .replace(/^#+\s+/gm, '') // Headers
+            .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
+            .replace(/(\*|_)(.*?)\1/g, '$2') // Italic
+            .replace(/~~(.*?)~~/g, '$1') // Strikethrough
+            .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Links
+            .replace(/`{3,}[\s\S]*?`{3,}/g, (match) => match.replace(/`{3,}/g, '').trim()) // Code blocks
+            .replace(/`(.+?)`/g, '$1') // Inline code
+            .replace(/^\s*[\*\-\+]\s+/gm, '') // Unordered lists
+            .replace(/^\s*\d+\.\s+/gm, '') // Ordered lists
+            .replace(/^\s*>\s+/gm, '') // Blockquotes
+            .replace(/!\[(.*?)\]\(.*?\)/g, '$1') // Images
+            .replace(/\n{3,}/g, '\n\n'); // Smart Gap Control: Collapse multiple empty lines
 
         input.value = clean.trim();
         
+        // Success Feedback
         isCleaned = true;
         actionBtn.innerText = "COPY CLEAN TEXT";
         actionBtn.classList.add('success');
@@ -230,7 +236,11 @@
                 actionBtn.innerText = originalLabel;
             }, 1500);
         } catch (e) {
-            alert("Copy failed. Please select and copy manually.");
+            // Fallback for some browsers
+            input.select();
+            document.execCommand('copy');
+            actionBtn.innerText = "COPIED!";
+            setTimeout(() => { actionBtn.innerText = "COPY CLEAN TEXT"; }, 1500);
         }
     }
 
